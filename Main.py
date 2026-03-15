@@ -208,7 +208,9 @@ def testar_lexer():
         "(3.14.5 2.0 +)",              # Inválido: Número malformado - múltiplos pontos
         "(3.14 2.0 &)",                # Inválido: Caractere inválido 
         "(3 4 +",                      # Inválido: Parênteses desbalanceados (falta fechar) esse teste demorou pra dar certo
-        "(VAR1 5 +)"                   # Inválido: Número grudado em variável
+        "(VAR1 5 +)",                  # Inválido: Número grudado em variável
+        "(0.20 2 *)))))",              # Inválido: Parênteses desbalanceados (falta abrir)
+        "Teste 1 2 Como + + + +"       # Válido: Teste de letra minúscula e sem parentesis
     ]
 
     #Faz todos os testes. Saudades do Rust que tem macro de teste =(
