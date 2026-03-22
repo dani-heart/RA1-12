@@ -1,3 +1,6 @@
 def exibirResultados(resultados: list):
     for resultado in resultados:
-        print(f"{resultado:.1f}")
+        if isinstance(resultado, (float, int)):
+            print(f"{resultado:.1f}")
+        else:
+            print(resultado)
