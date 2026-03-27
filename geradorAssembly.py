@@ -36,7 +36,8 @@ def gerarAssembly(tokens: list) -> str:
     #push {lr} é o endereço de retorno para a main. 
 
     codigo_data = [".data"] 
-    codigo_text = [".text", ".global main", "main:", "    push {lr}"]
+    codigo_text = [".text", ".global main", ".thumb", ".thumb_func", "main:", "    push {lr, pc}"]
+
     #Representam as primeiras linhas de código assembly, e são fundamentais para todo tipo de programa em ARM
 
     tabela_nums = {}# Dicionário para mapear números a rótulos (ex: "3.14" → "num_0"). Preenchido dinamicamente
@@ -163,7 +164,7 @@ def gerarAssembly(tokens: list) -> str:
 
     #Finalmente, depois de processar todos os tokens, precisamos adicionar as linhas de código para finalizar a função main 
     #o pop pc é a instrução de retorno, que vai pegar o endereço de retorno que guardamos no início da função e retornar para ele.
-    codigo_text.append("    pop {pc}")
+    codigo_text.append("    pop {pc, pc}")
     
 
     #Agora juntamos as linhas de código da seção de dados e da seção de texto para formar o arquivo completo.
