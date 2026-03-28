@@ -36,7 +36,7 @@ def gerarAssembly(tokens: list) -> str:
     #push {lr} é o endereço de retorno para a main. 
 
     codigo_data = [".data"] 
-    codigo_text = [".text", ".global main", ".thumb", ".thumb_func", "main:", "    push {lr, pc}"]
+    codigo_text = [".text", ".global main", "main:", "    ldr sp, =0x20000000"]
 
     #Representam as primeiras linhas de código assembly, e são fundamentais para todo tipo de programa em ARM
 
@@ -84,38 +84,46 @@ def gerarAssembly(tokens: list) -> str:
             codigo_text.append(f"    vpush {{d2}}")
 
 
-        #Essas foram as operações especiais que deram trabalho anteriormente. 
         elif token in ["//", "%", "^"]:
-            
-
-            #Realizamos essas operações usando inteiras nas 3 instruções, então é mais fácil fazer essas conversões antes das 
-            #condicionais.
             codigo_text.append(f"    vpop {{d0, d1}}")
             codigo_text.append(f"    vcvt.s32.f64 s0, d0")
             codigo_text.append(f"    vcvt.s32.f64 s1, d1")
             codigo_text.append(f"    vmov r0, s0")
             codigo_text.append(f"    vmov r1, s1")
-            
-            #Essas operações são curiosas. O VFP não sabe fazer divisão inteira, só divisão de float. 
-            #Então estamos puxando os valores de d0 e d1, convertendo para inteiro (vcvt é vconvert), aí movemos para r0 e r1
-            #E depois disso fazemos a operação usando registradores inteiros
-            
             if token == "//":
-                #O resultado da divisão inteira é armazenado em r2, e depois convertido de volta para float e empilhado.
-                codigo_text.append(f"    sdiv r2, r1, r0")
+                codigo_text.append(f"    mov r4, r1")  # r1 = base → r4 (contador)
+                codigo_text.append(f"    mov r5, r0")  # r0 = expoente → r5 (multiplicador)
+                codigo_text.append(f"    mov r6, #0")
+                codigo_text.append(f"div_loop_{i}:")
+                codigo_text.append(f"    cmp r4, r5")
+                codigo_text.append(f"    blt div_end_{i}")
+                codigo_text.append(f"    sub r4, r4, r5")
+                codigo_text.append(f"    add r6, r6, #1")
+                codigo_text.append(f"    b div_loop_{i}")
+                codigo_text.append(f"div_end_{i}:")
+                codigo_text.append(f"    vmov s2, r6")
             elif token == "%":
-                #mls -> Multiply and Subtract. r2 recebe r1 * r0, e depois r1 - r2 para obter o resto da divisão inteira.
-                codigo_text.append(f"    sdiv r3, r1, r0")
-                codigo_text.append(f"    mls r2, r3, r0, r1")
-
-                #Assembly não tem operador de potencia, então estamos usando "pow" da biblioteca matemática do ARM
-                
+                codigo_text.append(f"    mov r4, r1")
+                codigo_text.append(f"    mov r5, r0")
+                codigo_text.append(f"mod_loop_{i}:")
+                codigo_text.append(f"    cmp r4, r5")
+                codigo_text.append(f"    blt mod_end_{i}")
+                codigo_text.append(f"    sub r4, r4, r5")
+                codigo_text.append(f"    b mod_loop_{i}")
+                codigo_text.append(f"mod_end_{i}:")
+                codigo_text.append(f"    vmov s2, r4")
             elif token == "^":
-                codigo_text.append(f"    bl pow")
-                codigo_text.append(f"    mov r2, r0")
-            
-            #move o resultado para s2, converte de volta para float e empilha
-            codigo_text.append(f"    vmov s2, r2")
+                codigo_text.append(f"    mov r4, r0")
+                codigo_text.append(f"    mov r5, r1")
+                codigo_text.append(f"    mov r6, #1")
+                codigo_text.append(f"pow_loop_{i}:")
+                codigo_text.append(f"    cmp r4, #0")
+                codigo_text.append(f"    beq pow_end_{i}")
+                codigo_text.append(f"    mul r6, r6, r5")
+                codigo_text.append(f"    sub r4, r4, #1")
+                codigo_text.append(f"    b pow_loop_{i}")
+                codigo_text.append(f"pow_end_{i}:")
+                codigo_text.append(f"    vmov s2, r6")
             codigo_text.append(f"    vcvt.f64.s32 d2, s2")
             codigo_text.append(f"    vpush {{d2}}")
 
@@ -164,7 +172,8 @@ def gerarAssembly(tokens: list) -> str:
 
     #Finalmente, depois de processar todos os tokens, precisamos adicionar as linhas de código para finalizar a função main 
     #o pop pc é a instrução de retorno, que vai pegar o endereço de retorno que guardamos no início da função e retornar para ele.
-    codigo_text.append("    pop {pc, pc}")
+    codigo_text.append("    b .")
+
     
 
     #Agora juntamos as linhas de código da seção de dados e da seção de texto para formar o arquivo completo.
