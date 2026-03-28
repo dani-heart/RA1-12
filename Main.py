@@ -21,12 +21,15 @@ def main():
     todos_tokens = []
     assembly_final = ""
 
+    todos_tokens = []
     for linha in linhas:
         tokens = []
         parseExpressao(linha, tokens)
         if tokens:
-            todos_tokens.append(tokens)
-            assembly_final = gerarAssembly(tokens)  # sobrescreve = fica só a última
+            todos_tokens.append(tokens + ["NEWLINE"])  # marcador de fim de linha
+
+    tokens_completos = [t for linha_tokens in todos_tokens for t in linha_tokens]
+    assembly_final = gerarAssembly(tokens_completos)
 
     # Passo 3 — salva o Assembly da última execução
     with open("saida.asm", "w") as f:
