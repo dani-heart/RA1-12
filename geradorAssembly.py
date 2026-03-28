@@ -36,7 +36,8 @@ def gerarAssembly(tokens: list) -> str:
     #push {lr} é o endereço de retorno para a main. 
 
     codigo_data = [".data"] 
-    codigo_text = [".text", ".global main", "main:", "    ldr sp, =0x20000000"]
+    codigo_data.append("historico: .space 800")  # sempre declara o historico
+    codigo_text = [".text", ".global main", "main:", "    ldr sp, =0x20000000", "    mov r2, #0"]
 
     #Representam as primeiras linhas de código assembly, e são fundamentais para todo tipo de programa em ARM
 
@@ -130,20 +131,26 @@ def gerarAssembly(tokens: list) -> str:
         #  RES e MEM são bem mais difíceis, porque tem que lidar com a memória.
         # RES é mais fácil, porque é só puxar o número de linhas para trás e pegar o resultado daquelas linhas.
         elif token == "RES":
-            linha_hist = "historico: .space 800" #Pede 800 bytes de armazenamento para a RAM
-            if linha_hist not in codigo_data: #E se não tiver a linha no código, adiciona
+            linha_hist = "historico: .space 800"
+            if linha_hist not in codigo_data:
                 codigo_data.append(linha_hist)
-                
             
-            codigo_text.append(f"    vpop {{d0}}") #Puxa o número de linhas para trás, que deve estar no topo da pilha. 
-            codigo_text.append(f"    vcvt.s32.f64 s0, d0") #Converte para inteiro, porque o número de linhas é um inteiro
-            codigo_text.append(f"    vmov r0, s0") #Move para r0 para usar como índice de acesso à memória
-            
-            #Carrega o endereço base em r1 e puxa o primeiro valor que estiver lá, que é o resultado da linha mais recente.
+            codigo_text.append(f"    vpop {{d0}}")           # N = quantas linhas atrás
+            codigo_text.append(f"    vcvt.s32.f64 s0, d0")  # converte N para inteiro
+            codigo_text.append(f"    vmov r0, s0")    
+            codigo_text.append(f"    lsl r0, r0, #3")
             codigo_text.append(f"    ldr r1, =historico")
-            codigo_text.append(f"    vldr.f64 d0, [r1]")
+            codigo_text.append(f"    sub r3, r2, r0")   # r3 = offset_atual - N*8
+            codigo_text.append(f"    add r1, r1, r3")     # busca N posições atrás do offset atual# r0 = N
+            codigo_text.append(f"    vldr.f64 d0, [r1]")    # carrega o resultado N linhas atrás
             codigo_text.append(f"    vpush {{d0}}")
-
+        elif token == "NEWLINE":
+            codigo_text.append(f"    vpop {{d0}}")
+            codigo_text.append(f"    ldr r0, =historico")
+            codigo_text.append(f"    add r0, r0, r2")        # salva no offset atual
+            codigo_text.append(f"    vstr.f64 d0, [r0]")
+            codigo_text.append(f"    add r2, r2, #8")        # avança offset 8 bytes
+            codigo_text.append(f"    vpush {{d0}}")
         else: #Se não for RES nem operador, nem número, nem parêntese, só pode ser MEM ou uma variável.
             linha_declaracao = f"var_{token}: .double 0.0" #Declara a variável como um double, inicializada com 0.0
             if linha_declaracao not in codigo_data:#Se não for declarada ainda, declara
