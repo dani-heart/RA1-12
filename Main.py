@@ -1,3 +1,5 @@
+# Integrantes: Mariana Alves da Silva (@himarialves), Dani Heart Basso (@dani-heart)
+# Grupo Canvas: RA1-12
 import sys
 from parseExpressao import parseExpressao
 from geradorAssembly import gerarAssembly, lerArquivo
